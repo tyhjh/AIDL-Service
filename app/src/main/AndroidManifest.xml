@@ -33,7 +33,6 @@
             <intent-filter>
                 <action android:name="com.yorhp.messenger.name"/>
             </intent-filter>
-
         </service>
 
     </application>

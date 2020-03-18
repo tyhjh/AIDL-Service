@@ -13,6 +13,7 @@ import android.os.RemoteException;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.yorhp.interprocesscommunication.bean.User;
 import com.yorhp.interprocesscommunication.service.AIDLService;
 import com.yorhp.interprocesscommunication.service.MessengerService;
 
@@ -23,6 +24,8 @@ import androidx.appcompat.app.AppCompatActivity;
  * @author tyhj
  */
 public class MainActivity extends AppCompatActivity {
+
+    private User user;
 
     private Button btnTest;
     private IMyAidlInterface myAidlInterface;
@@ -59,12 +62,15 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnAIDL).setOnClickListener(v -> {
             try {
                 String name = null;
-                name = myAidlInterface.getName("Nick");
+                User user=myAidlInterface.getUserById(0);
+                name = user.getName();
                 Toast.makeText(MainActivity.this, name, Toast.LENGTH_SHORT).show();
+                myAidlInterface.unRegisterListener(userChangedListener);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
         });
+
         //绑定服务
         bindService(new Intent(MainActivity.this, MessengerService.class), mMessengerServiceConnection, BIND_AUTO_CREATE);
         //Messenger进行通信
@@ -118,6 +124,11 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName name, IBinder service) {
             myAidlInterface = IMyAidlInterface.Stub.asInterface(service);
             //Log.i("MainActivity","service connected");
+            try {
+                myAidlInterface.registerListener(userChangedListener);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
             Toast.makeText(MainActivity.this, "service connected", Toast.LENGTH_SHORT).show();
         }
 
@@ -125,5 +136,16 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceDisconnected(ComponentName name) {
         }
     };
+
+
+    private IOnUserChangedListener userChangedListener=new IOnUserChangedListener.Stub() {
+        @Override
+        public void onUserChanged(User user) throws RemoteException {
+            handler.post(()->{
+                Toast.makeText(MainActivity.this, user.getName(), Toast.LENGTH_SHORT).show();
+            });
+        }
+    };
+
 
 }

@@ -20,11 +20,15 @@ import androidx.annotation.Nullable;
 
 public class MessengerService extends Service {
 
+    /**
+     *客户端的信使
+     */
     private Messenger clientMessenger;
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        //返回信使
         return messenger.getBinder();
     }
 
@@ -47,6 +51,7 @@ public class MessengerService extends Service {
                             Message message = new Message();
                             message.what=2;
                             message.setData(bundle);
+                            //发送消息
                             clientMessenger.send(message);
                         } catch (RemoteException e) {
                             e.printStackTrace();
@@ -59,8 +64,9 @@ public class MessengerService extends Service {
         }
     };
 
-    //服务本地信使
+    /**
+     * 服务本地信使
+     */
     private Messenger messenger = new Messenger(handler);
-
 
 }
