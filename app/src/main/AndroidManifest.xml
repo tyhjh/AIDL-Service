@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.yorhp.interprocesscommunication">
 
+    <permission android:name="com.yorhp.service.ACCESS_USER_INFO"
+        android:protectionLevel="normal"/>
+
+    <uses-permission android:name="com.yorhp.service.ACCESS_USER_INFO"/>
+
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

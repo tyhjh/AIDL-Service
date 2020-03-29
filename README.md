@@ -662,6 +662,72 @@ private RemoteCallbackList<IOnUserChangedListener> listeners = new RemoteCallbac
 ```
 里面需要注意的是`listeners.beginBroadcast();`和`listeners.finishBroadcast();`必须配对使用；
 
+## 断线重连
+为了程序的健壮性，我们还需要考虑服务意外死亡的情况；当服务意外停止的时候我们需要重新连接服务，第一种方法比较简单，就是在`onServiceDisconnected`方法中重连服务；第二种方法就是给Binder设置DeathRecipient监听，当Binder死亡时，我们会收到binderDied方法的回调；两种方式都可以使用，区别在于**onServiceDisconnected**是在客户端的主线程中被调用的，而**binderDied**是在客户端的Binder线程池中被回调，使用的时候需要注意一下；
+```java
+ServiceConnection mServiceConnection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            try {
+                iBinder.linkToDeath(new IBinder.DeathRecipient() {
+                    @Override
+                    public void binderDied() {
+                        //服务关闭，可以在此重连服务
+                    }
+                },0);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            //服务关闭，可以在此重连服务
+        }
+    };
+```
+
+## 权限验证
+默认情况下，远程服务是任何人都可以连接的，为了保证服务的安全，我们需要在服务中加上权限验证；
+第一种方法是在**onBind**方法中验证，如果验证不通过就返回null，这样验证失败的客户端就无法绑定服务；验证方式可以使用权限验证，我们在AndroidManifest文件中申明权限，随便取一个名字；
+```xml
+ <permission
+        android:name="com.yorhp.aidl.permission.ACCESS_USER_INFO"
+        android:protectionLevel="normal" />
+```
+然后就可以在**onBind**方法中进行验证，如果客户端连接需要在**AndroidManifest**里面申明该权限
+```java
+  @Override
+    public IBinder onBind(Intent intent) {
+        int check=checkCallingOrSelfPermission("com.yorhp.aidl.permission.ACCESS_USER_INFO");
+        if(check== PackageManager.PERMISSION_DENIED){
+        //权限申请失败，返回null
+            return null;
+        }
+        return mBidner;
+    }
+```
+第二种方式是在AIDL接口的**onTransact**方法中进行验证，如果返回了false，服务端就不会终止执行AIDL中的方法，从而达到保护服务端的目的；具体验证方法也可以使用权限验证，和上面是一样的；在这个方法里面我们通过` getCallingPid()`和`getCallingUid()`可以拿到客户端所属应用的Pid和Uid，通过这两个参数可以做一些验证操作，比如可以验证包名
+```java
+  @Override
+        public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
+            String packageName = null;
+            String[] packages = getPackageManager().getPackagesForUid(getCallingUid());
+            if (packages != null && packages.length > 0) {
+                packageName = packages[0];
+            }
+
+            if (packageName == null || !packageName.startsWith("com.yorhp")) {
+                //返回失败
+                return false;
+            }
+            return super.onTransact(code, data, reply, flags);
+        }
+```
+
+
+
+
 ## 总结
 讲道理，其实仔细看看还是挺简单的
 
